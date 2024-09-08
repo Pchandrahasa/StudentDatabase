@@ -41,6 +41,28 @@ public class StudentService implements StudentRepository {
 
     @Override
     public Student addStudent(Student student) {
+        if (student.getCourse() != null) {
+            Course course = courseJpaRepository.findById(student.getCourse().getCourseId()).orElse(null);
+            if (course == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found");
+            }
+            if(course.getTeachers()!=null){
+                ArrayList<Teacher> updateTeacher=new ArrayList<>();
+                for(Teacher teacher: course.getTeachers()){
+                    int teacherId=teacher.getTeacherId();
+                    Teacher presentTeacher=teacherJpaRepository.findById(teacherId).get();
+                    if(presentTeacher!=null){
+                        updateTeacher.add(presentTeacher);
+                    }
+                    else{
+                        throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+                    }
+                }
+                course.setTeachers(updateTeacher);
+            }
+            student.setCourse(course);
+        }
+
         Student newStudent=studentJpaRepository.save(student);
         return newStudent;
     }

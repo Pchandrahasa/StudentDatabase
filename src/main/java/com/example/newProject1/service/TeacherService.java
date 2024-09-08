@@ -12,7 +12,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class TeacherService implements TeacherRepository {
@@ -31,11 +30,58 @@ public class TeacherService implements TeacherRepository {
 
     @Override
     public Teacher getTeacherById(int teacherId) {
-        Optional<Teacher> teacherOptional = teacherJpaRepository.findById(teacherId);
-        if (teacherOptional.isPresent()) {
-            return teacherOptional.get();
+        Teacher teacher = teacherJpaRepository.findById(teacherId).orElse(null);
+        if (teacher != null) {
+            return teacher;
         } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Teacher not found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @Override
+    public Teacher addTeacher(Teacher teacher) {
+        if (teacher.getCourses() != null) {
+            ArrayList<Course> updatedCourse = new ArrayList<>();
+            for (Course course : teacher.getCourses()) {
+                Course presentCourse = courseJpaRepository.findById(course.getCourseId()).orElse(null);
+                if (presentCourse != null) {
+                    updatedCourse.add(presentCourse);
+                } else {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+                }
+            }
+            teacher.setCourses(updatedCourse);
+        }
+        return teacherJpaRepository.save(teacher);
+    }
+
+    @Override
+    public Teacher updateTeacher(int teacherId, Teacher teacher) {
+        Teacher existingTeacher = teacherJpaRepository.findById(teacherId).orElse(null);
+        if (existingTeacher != null) {
+            if (teacher.getTeacherName() != null) {
+                existingTeacher.setTeacherName(teacher.getTeacherName());
+            }
+
+            if (teacher.getDepartment() != null) {
+                existingTeacher.setDepartment(teacher.getDepartment());
+            }
+
+            if (teacher.getCourses() != null) {
+                ArrayList<Course> updatedCourse = new ArrayList<>();
+                for (Course course : teacher.getCourses()) {
+                    Course presentCourse = courseJpaRepository.findById(course.getCourseId()).orElse(null);
+                    if (presentCourse != null) {
+                        updatedCourse.add(presentCourse);
+                    } else {
+                        throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+                    }
+                }
+                existingTeacher.setCourses(updatedCourse);
+            }
+            return teacherJpaRepository.save(existingTeacher);
+        } else {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
     }
 
@@ -44,44 +90,7 @@ public class TeacherService implements TeacherRepository {
         if (teacherJpaRepository.existsById(teacherId)) {
             teacherJpaRepository.deleteById(teacherId);
         } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Teacher not found");
-        }
-    }
-
-    @Override
-    public Teacher addTeacher(Teacher teacher) {
-        return teacherJpaRepository.save(teacher);
-    }
-
-    @Override
-    public Teacher updateTeacher(int teacherId, Teacher teacher) {
-        Optional<Teacher> existingTeacherOptional = teacherJpaRepository.findById(teacherId);
-        if (existingTeacherOptional.isPresent()) {
-            Teacher existingTeacher = existingTeacherOptional.get();
-            // Update fields
-            if (teacher.getTeacherName() != null) {
-                existingTeacher.setTeacherName(teacher.getTeacherName());
-            }
-            if (teacher.getDepartment() != null) {
-                existingTeacher.setDepartment(teacher.getDepartment());
-            }
-            if (teacher.getCourses()!=null){
-               ArrayList<Course> updatedCourse=new ArrayList<>();
-               for(Course course:teacher.getCourses()){
-                  int courseId=course.getCourseId();
-                  Course PresentCourse=courseJpaRepository.findById(courseId).get();
-                  if(PresentCourse!=null) {
-                      updatedCourse.add(PresentCourse);
-                  }else{
-                      throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-                  }
-               }
-               existingTeacher.setCourses(updatedCourse);
-            }
-
-            return teacherJpaRepository.save(existingTeacher);
-        } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Teacher not found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND );
         }
     }
 }

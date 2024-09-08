@@ -12,7 +12,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class CourseService implements CourseRepository {
@@ -31,53 +30,64 @@ public class CourseService implements CourseRepository {
 
     @Override
     public Course getCourseById(int courseId) {
-        Optional<Course> courseOptional = courseJpaRepository.findById(courseId);
-        return courseOptional.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+        Course course = courseJpaRepository.findById(courseId).orElse(null);
+        if (course == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        return course;
     }
 
     @Override
     public Course addCourse(Course course) {
-         courseJpaRepository.save(course);
-         return course;
+        if (course.getTeachers() != null) {
+            List<Teacher> updatedTeachers = new ArrayList<>();
+            for (Teacher teacher : course.getTeachers()) {
+                Teacher presentTeacher = teacherJpaRepository.findById(teacher.getTeacherId()).orElse(null);
+                if (presentTeacher != null) {
+                    updatedTeachers.add(presentTeacher);
+                } else {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+                }
+            }
+            course.setTeachers(updatedTeachers);
+        }
+        return courseJpaRepository.save(course);
     }
 
     @Override
     public Course updateCourse(int courseId, Course course) {
-        Course exCourse = courseJpaRepository.findById(courseId).get();
-        if (exCourse!=null) {
-            Course existingCourse = exCourse;
-            if (course.getCourseName() != null) {
-                existingCourse.setCourseName(course.getCourseName());
-            }
-            if (course.getCredits() != 0) {
-                existingCourse.setCredits(course.getCredits());
-            }
-            if(course.getTeachers()!=null){
-                ArrayList<Teacher> updatedTeacher=new ArrayList<>();
-                for(Teacher teacher : course.getTeachers()){
-                    int TeacherId=teacher.getTeacherId();
-                    Teacher presentTeacher=teacherJpaRepository.findById(TeacherId).get();
-                    if (presentTeacher !=null){
-                        updatedTeacher.add(presentTeacher);
-                    }
-                    else{
-                        throw new ResponseStatusException(HttpStatus.NOT_FOUND,"teacher not found");
-                    }
-                }
-                exCourse.setTeachers(updatedTeacher);
-            }
-            return courseJpaRepository.save(existingCourse);
-        } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found");
+        Course existingCourse = courseJpaRepository.findById(courseId).orElse(null);
+        if (existingCourse == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
+
+        if (course.getCourseName() != null) {
+            existingCourse.setCourseName(course.getCourseName());
+        }
+        if (course.getCredits() > 0) {
+            existingCourse.setCredits(course.getCredits());
+        }
+        if (course.getTeachers() != null) {
+            List<Teacher> updatedTeachers = new ArrayList<>();
+            for (Teacher teacher : course.getTeachers()) {
+                Teacher presentTeacher = teacherJpaRepository.findById(teacher.getTeacherId()).orElse(null);
+                if (presentTeacher != null) {
+                    updatedTeachers.add(presentTeacher);
+                } else {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+                }
+            }
+            existingCourse.setTeachers(updatedTeachers);
+        }
+
+        return courseJpaRepository.save(existingCourse);
     }
 
     @Override
     public void deleteCourse(int courseId) {
-        if (courseJpaRepository.existsById(courseId)) {
-            courseJpaRepository.deleteById(courseId);
-        } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found");
+        if (!courseJpaRepository.existsById(courseId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
+        courseJpaRepository.deleteById(courseId);
     }
 }
