@@ -1,6 +1,8 @@
 package com.example.newProject1.service;
 
+import com.example.newProject1.model.Course;
 import com.example.newProject1.model.Teacher;
+import com.example.newProject1.repository.CourseJpaRepository;
 import com.example.newProject1.repository.TeacherJpaRepository;
 import com.example.newProject1.repository.TeacherRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +19,9 @@ public class TeacherService implements TeacherRepository {
 
     @Autowired
     private TeacherJpaRepository teacherJpaRepository;
+
+    @Autowired
+    private CourseJpaRepository courseJpaRepository;
 
     @Override
     public ArrayList<Teacher> getTeacher() {
@@ -60,6 +65,20 @@ public class TeacherService implements TeacherRepository {
             if (teacher.getDepartment() != null) {
                 existingTeacher.setDepartment(teacher.getDepartment());
             }
+            if (teacher.getCourses()!=null){
+               ArrayList<Course> updatedCourse=new ArrayList<>();
+               for(Course course:teacher.getCourses()){
+                  int courseId=course.getCourseId();
+                  Course PresentCourse=courseJpaRepository.findById(courseId).get();
+                  if(PresentCourse!=null) {
+                      updatedCourse.add(PresentCourse);
+                  }else{
+                      throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+                  }
+               }
+               existingTeacher.setCourses(updatedCourse);
+            }
+
             return teacherJpaRepository.save(existingTeacher);
         } else {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Teacher not found");

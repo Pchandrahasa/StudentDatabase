@@ -2,9 +2,11 @@ package com.example.newProject1.service;
 
 import com.example.newProject1.model.Course;
 import com.example.newProject1.model.Student;
+import com.example.newProject1.model.Teacher;
 import com.example.newProject1.repository.CourseJpaRepository;
 import com.example.newProject1.repository.StudentJpaRepository;
 import com.example.newProject1.repository.StudentRepository;
+import com.example.newProject1.repository.TeacherJpaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,9 @@ public class StudentService implements StudentRepository {
 
     @Autowired
     private CourseJpaRepository courseJpaRepository;
+
+    @Autowired
+    private TeacherJpaRepository teacherJpaRepository;
 
     public ArrayList<Student> getStudents() {
         List<Student> studentList=studentJpaRepository.findAll();
@@ -41,8 +46,11 @@ public class StudentService implements StudentRepository {
     }
 
     public Student updateStudent(int studentId, Student student) {
-        Student existingStudent = studentJpaRepository.findById(studentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found"));
+        Student existingStudent = studentJpaRepository.findById(studentId).get();
+
+        if (existingStudent == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found");
+        }
 
         if (student.getName() != null) {
             existingStudent.setName(student.getName());
@@ -50,15 +58,33 @@ public class StudentService implements StudentRepository {
         if (student.getRollNo() != null) {
             existingStudent.setRollNo(student.getRollNo());
         }
+
         if (student.getCourse() != null) {
-            Course course = courseJpaRepository.findById(student.getCourse().getCourseId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+            Course course = courseJpaRepository.findById(student.getCourse().getCourseId()).orElse(null);
+            if (course == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found");
+            }
+            if(course.getTeachers()!=null){
+                ArrayList<Teacher> updateTeacher=new ArrayList<>();
+                for(Teacher teacher: course.getTeachers()){
+                    int teacherId=teacher.getTeacherId();
+                    Teacher presentTeacher=teacherJpaRepository.findById(teacherId).get();
+                    if(presentTeacher!=null){
+                        updateTeacher.add(presentTeacher);
+                    }
+                    else{
+                        throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+                    }
+                }
+                course.setTeachers(updateTeacher);
+            }
+            existingStudent.setCourse(course);
         }
 
         return studentJpaRepository.save(existingStudent);
     }
 
-    @Override
+        @Override
     public void deleteStudent(int studentId) {
         studentJpaRepository.deleteById(studentId);
 
